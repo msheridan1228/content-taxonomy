@@ -518,10 +518,6 @@ from transformers import T5Tokenizer, T5ForConditionalGeneration, T5Config
 
 # COMMAND ----------
 
-tag_meta.head()
-
-# COMMAND ----------
-
 model = T5ForConditionalGeneration.from_pretrained('t5-small')
 tokenizer = T5Tokenizer.from_pretrained('t5-small')
 device = torch.device('cpu')

@@ -1,6 +1,6 @@
 from bs4 import BeautifulSoup
 import re
-import hub
+import tensorflow_hub as hub
 
 def clean_html(text):
   if text == None:

@@ -1,18 +1,21 @@
 import urllib.request as urllib2
 import json, time
 import pandas as pd
-from urllib import parse
+from urllib import parse, response
 import re
-
-from text_cleaning import clean_html, first_n_words, num_words, embed
+import tensorflow as tf
+import tensorflow_text as text
+import requests
+from hierarchical_content_taxonomy.taxonomy_creation.text_cleaning import clean_html, first_n_words, num_words, embed
 
 class WordPressScraper:
-  def __init__(self, urls, embedder=embed):
+  def __init__(self, urls: list[str]):
       self.urls = urls
-      self.embedder = embedder
+      self.required_columns = ['text', 'title', 'url', 'date', 'id']
+      self.min_text_length = 20
 
-  def save_clean_wordpress_data(self, filename):
-      data = self.get_article_data()
+  def get_wordpress_data(self, filename):
+      data = self.fetch_from_wordpress()
       if len(data) == 0:
           print("No data to save.")
           return pd.DataFrame()
@@ -24,70 +27,104 @@ class WordPressScraper:
       return data
 
   def clean_wordpress_data(self, data):
+      if data.empty:
+          print("Data is empty. Cannot clean.")
+          return pd.DataFrame()
+      
+      self.check_required_columns(data)
+
       data['site'] = data['url'].map(self.get_site)
       data['title'] = data['title'].map(clean_html)
+      data = self.remove_dev_urls(data)
+      if data.empty:
+          print("No data after removing dev URLs.")
+          return pd.DataFrame()
+      
       data['year_published'] = data['date'].map(self.pull_year)
-      recent_data = data.map(lambda x: self.is_2020s_publish(x['year_published'], x['title']), axis=1)
+      recent_data = data.apply(lambda x: self.is_2020s_publish(x['year_published'], x['title']), axis=1)
       data = data[recent_data]
+
+      data.dropna(inplace=True)
+      data.drop_duplicates(subset=['title'], inplace=True)
+      data.drop_duplicates(subset=['url'], inplace=True)
+
       data['text'] = data['text'].map(clean_html)
       data['text'] = data['text'].map(first_n_words)
       data['text_length'] = data['text'].map(num_words)
-      data['title_plus_text'] = data['title'] + '. ' + data['text']
-      data['text_embedding'] = self.embedder(data['title_plus_text']).numpy().tolist()
-      data.dropna(inplace=True)
+
+      data = data[~(data['text']=='')]
+      data = data[data['text_length'] > self.min_text_length]
       data.drop_duplicates(subset=['text'], inplace=True)
+      if data.empty:
+          print("No data after cleaning.")
+          return pd.DataFrame()
+
+      return data
+  
+  def fetch_from_wordpress(self, filename='cleaned_wordpress_data.csv'):
+      all_data = []
+      for url in self.urls:
+          base_api = f"{url.rstrip('/')}/wp-json/wp/v2/posts"
+          df = self.get_all_articles(base_api)
+          if not df.empty:
+              all_data.append(df)
+
+      final_df = pd.concat(all_data, ignore_index=True)
+      final_df['text'] = final_df['content'].apply(lambda x: x['rendered'])
+      final_df['title'] = final_df['title'].apply(lambda x: x['rendered'])
+      final_df['url'] = final_df['link']
+      final_df = final_df[self.required_columns]
+      final_df.to_csv(filename, index=False)
+      return final_df
+  
+  def remove_dev_urls(self, data):
+      if 'site' not in data.columns:
+          print("No 'site' column found in data.")
+          return data
+      bad_string_list = ['.pantheon.', '.lndo', '.local.', 'test.', 'sonic.', '.pantheonsite.', 'localhost', ':8000', '.staging.', 'development', 'non-prod']
+      for bad_string in bad_string_list:
+          data = data[~data['site'].str.contains(bad_string)]
       return data
 
-  def get_article_data(self):
-    all_of_it = self.get_from_wordpress(self.urls)
-    data = self.wp_to_df(all_of_it)
-    return data
+    
+  def get_all_articles(self, base_url, per_page=100):
+        all_posts = []
+        page = 1
 
-  def get_from_wordpress(self):
-    all_of_it = []
-    page = "page="
-    per_page = "&per_page="
-    number_per_page = str(100)
-    for url in self.urls:
-      num_articles = int(urllib2.urlopen(url).getheader('X-Wp-Total'))
-      print('total number of articles in:', url, num_articles)
-      iterations = 1 + int(num_articles/int(number_per_page))
-      print('total number of iterations to get data:', iterations)
-      for i in range(iterations):
-          while True:
-              try:
-                  content = urllib2.urlopen(url+page+str(i+1)+per_page+number_per_page)
-                  if content.status == 200:
-                    parsed_json = json.loads(content.read().decode('utf-8'))
-                    all_of_it.append(parsed_json)
-                    time.sleep(.1)
-                  else:
-                    print('request error',str(i))
-              except Exception as e:
-                  print(e)
-                  print('try again', str(i))
-                  time.sleep(5)
-                  continue
-              break
-    return all_of_it
-
-  def wp_to_df(all_of_it):
-    data = pd.DataFrame()
-    n_list = sum([len(all_of_it[i]) for i in range(len(all_of_it))])
-    index_ = 0
-    for o,k in enumerate(all_of_it):
-        for i,j in enumerate(all_of_it[o]): # extract content from WP
-            data.loc[index_,'id'] = j['id']
+        while True:
+            paged_url = f"{base_url}?per_page={per_page}&page={page}"
             try:
-              data.loc[index_,'date'] = pd.to_datetime(j['date_gmt'].replace('T',' '))
-            except:
-              data.loc[index_,'date'] = ['1999-01-01']
-            data.loc[index_,'slug'] = j['slug']
-            data.loc[index_,'url'] = j['link']
-            data.loc[index_,'title'] = j['title']['rendered']
-            data.loc[index_,'text'] = j['content']['rendered']
-            index_+=1
-    return data
+                response = requests.get(paged_url, headers={"Accept": "application/json"})
+                if response.status_code != 200:
+                    print(f"Failed to fetch page {page}: {response.status_code}")
+                    break
+
+                posts = response.json()
+                if not posts:
+                    break
+
+                all_posts.extend(posts)
+
+                if len(posts) < per_page:
+                    break  # Last page
+
+                page += 1
+                if page ==10:  # Limit to 10 pages for testing
+                    break
+                print(f"Fetched {len(posts)} posts from page {page}")
+
+            except Exception as e:
+                print(f"Error fetching page {page}: {e}")
+                break
+
+        return pd.DataFrame(all_posts)
+
+
+  
+  def check_required_columns(self, data):
+      for column in self.required_columns:
+          if column not in data.columns:
+              raise ValueError(f"Required column '{column}' is missing from the DataFrame.")
 
   def get_site(self, url):
       parsed = parse.urlsplit(url)

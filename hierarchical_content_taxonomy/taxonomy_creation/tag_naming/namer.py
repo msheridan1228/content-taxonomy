@@ -2,8 +2,7 @@ from abc import ABC, abstractmethod
 
 
 class TagNamer:
-    def __init__(self, tag_meta, docs_df):
-        self.tag_meta = tag_meta
+    def __init__(self, docs_df):
         self.docs_df = docs_df
 
     def check_required_columns(self, required_columns):
