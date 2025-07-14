@@ -7,8 +7,9 @@ import re
 from text_cleaning import clean_html, first_n_words, num_words, embed
 
 class WordPressScraper:
-  def __init__(self, urls):
+  def __init__(self, urls, embedder=embed):
       self.urls = urls
+      self.embedder = embedder
 
   def save_clean_wordpress_data(self, filename):
       data = self.get_article_data()
@@ -32,7 +33,7 @@ class WordPressScraper:
       data['text'] = data['text'].map(first_n_words)
       data['text_length'] = data['text'].map(num_words)
       data['title_plus_text'] = data['title'] + '. ' + data['text']
-      data['text_embedding'] = embed(data['title_plus_text']).numpy().tolist()
+      data['text_embedding'] = self.embedder(data['title_plus_text']).numpy().tolist()
       data.dropna(inplace=True)
       data.drop_duplicates(subset=['text'], inplace=True)
       return data
