@@ -1,21 +1,3 @@
-# Databricks notebook source
-# MAGIC %md # Noteboook to create the hierarchical content tagging taxonomoy
-# MAGIC %md ## Knowledge transfer found here: https://redventures.atlassian.net/wiki/spaces/CP/pages/19805831463/Global+Tagging+Model+Knowledge+Transfer
-# COMMAND ----------
-
-# MAGIC %md # Packages
-# MAGIC Uses 7.3 ML runtime
-
-# COMMAND ----------
-
-# MAGIC %run ./utils/package-utils
-
-# COMMAND ----------
-
-!pip install fastcluster==1.1.28
-
-# COMMAND ----------
-
 import scipy.cluster.hierarchy as shc
 from numpy.core import multiarray
 import fastcluster as fc

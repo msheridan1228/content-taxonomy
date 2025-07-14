@@ -1,0 +1,12 @@
+fastcluster==1.1.28
+numpy==1.19.2 
+beautifulsoup4==4.6.3 as bs4
+fuzzywuzzy
+wikipedia
+spacy
+nltk
+tensorflow
+tensorflow_hub
+tensorflow_text
+scikit-learn
+spacy
