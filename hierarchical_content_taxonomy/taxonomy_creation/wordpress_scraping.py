@@ -55,6 +55,8 @@ class WordPressScraper:
       data = data[~(data['text']=='')]
       data = data[data['text_length'] > self.min_text_length]
       data.drop_duplicates(subset=['text'], inplace=True)
+      data.reset_index(drop=True, inplace=True)
+
       if data.empty:
           print("No data after cleaning.")
           return pd.DataFrame()

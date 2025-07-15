@@ -19,14 +19,16 @@ class ClusterCreator:
         self.check_required_columns()
         print('creating embeddings')
         self.create_embeddings()
+        # save embeddings
+        self.docs_df.to_csv('embeddings.csv', index=False)
         print('creating linkage vectors')
-        self.create_linkage_matrix(self.method, self.metric)
+        self.create_linkage_matrix()
         print('creating dendrogram')
         self.create_dendrogram()
         print('finding optimal clusters')
-        self.find_optimal_clusters(self.method, self.metric)
+        self.find_optimal_clusters()
 
-    def create_cluster_assignments(self, cluster_distances: list[int]) -> pd.DataFrame:
+    def create_cluster_assignments(self, cluster_distances: list[float]) -> pd.DataFrame:
         self.set_cluster_distances(cluster_distances)
         self.assign_cluster_labels()
         return self.docs_df
@@ -36,42 +38,51 @@ class ClusterCreator:
 
     def create_embeddings(self) -> None:
         self.docs_df['title_plus_text'] = self.docs_df['title'] + '. ' + self.docs_df['text']
-        self.embeddings = self.embedder(self.docs_df['title_plus_text']).tolist().numpy()
+        self.embeddings = self.embedder(self.docs_df['title_plus_text']).numpy()
         self.docs_df['text_embedding'] = self.embeddings.tolist()
 
     def create_linkage_matrix(self) -> None:
-        if not self.embeddings:
+        if self.embeddings is None:
             raise ValueError("Embeddings must be created before generating the linkage matrix.")
 
-        self.docs_df['linkage_matrix'] = fc.linkage_vector(self.embeddings, method=self.method, metric=self.metric)
+        self.linkage_matrix = fc.linkage_vector(self.embeddings, method=self.method, metric=self.metric)
 
     def create_dendrogram(self) -> None:
-        if 'linkage_matrix' not in self.docs_df.columns:
+        if self.linkage_matrix is None:
             raise ValueError("Linkage matrix must be created before generating the dendrogram.")
 
-        plt.figure(figsize=(10, 7))  
-        plt.title("Dendrograms")  
-        dend = shc.dendrogram(self.docs_df['linkage_matrix'])
+        plt.figure(figsize=(10, 7))
+        plt.title("Dendrograms")
+        dend = shc.dendrogram(self.linkage_matrix)
         plt.show()
 
     def find_optimal_clusters(self) -> None:
-        if 'linkage_matrix' not in self.docs_df.columns:
+        if self.linkage_matrix is None:
             raise ValueError("Linkage matrix must be created before finding optimal clusters.")
-        K = np.unique((np.round(np.logspace(.2, 2.85, num = 25), 0)).astype(int))
+        
+        y_axis = self.linkage_matrix[:, 2]
+        distances = np.logspace(np.log10(min(y_axis)), np.log10(max(y_axis)), num=25).tolist()
 
         distortions = []
-        for k in K:
-            clusters = fcluster(self.docs_df['linkage_matrix'], k, criterion='distance')
-            distortions.append(metrics.silhouette_score(self.embeddings, clusters))
+        num_clusters = []
+        for distance in distances:
+            clusters = fcluster(self.linkage_matrix, distance, criterion='distance')
+            if len(np.unique(clusters)) < 2:
+                print(f"Skipping distance={distance} bc you need at least 2 clusters")
+                distances.remove(distance)
+                continue
+            score = metrics.silhouette_score(self.embeddings, clusters)
+
+            distortions.append(np.round(score, 3))
+            num_clusters.append(len(np.unique(clusters)))
 
         plt.figure(figsize=(12, 8))
-        plt.plot(K, distortions, 'bx-')
-        plt.xlabel('k')
-        plt.ylabel('Avg Silhouette Width')
-        plt.xscale('log')
-        plt.title('The Silhouette method showing the optimal k')
-        for x,y in zip(K,distortions):
-          label = "{}".format(x)
+        plt.plot(num_clusters, distortions, 'bx-')
+        plt.xlabel('Number of Clusters')
+        plt.ylabel('Avg Silhouette Coefficient')
+        plt.title('The Silhouette method showing the optimal number of clusters')
+        for x,y,z in zip(num_clusters, distortions, distances):
+          label = f"d={np.round(z, 3)},\n n_clust={x}"
           plt.annotate(label, # this is the text
                       (x,y), # this is the point to label
                       textcoords="offset points", # how to position the text
@@ -79,26 +90,26 @@ class ClusterCreator:
                       ha='center') # horizontal alignment can be left, right or cente
         plt.show()
 
-    def set_cluster_distances(self, cluster_distances: list[int]) -> None:
+    def set_cluster_distances(self, cluster_distances: list[float]) -> None:
         if not isinstance(cluster_distances, list):
-            raise ValueError("Cluster distances must be a list of integers representing the number of clusters.")
-        if not all(isinstance(i, int) for i in cluster_distances):
-            raise ValueError("All elements in cluster distances must be integers.")
+            raise ValueError("Cluster distances must be a list of floats representing the number of clusters.")
+        if not all(isinstance(i, float) for i in cluster_distances):
+            raise ValueError("All elements in cluster distances must be floats.")
         if len(cluster_distances) == 0:
             raise ValueError("Cluster distances list cannot be empty.")
-        if any(i<=0 or i > 100 for i in cluster_distances):
-            raise ValueError("Cluster distances must be between 1 and 100.")
+        if any(i<=0 or i > 10 for i in cluster_distances):
+            raise ValueError("Cluster distances must be between 0 and 10.")
         self.cluster_distances = cluster_distances
         self.n_clusters = len(cluster_distances)
         self.topic_levels = {'topic_level_' + str(i+1): cluster_distances[i] for i in range(self.n_clusters)}
 
     def assign_cluster_labels(self) -> None:
-        if self.docs_df['text_embedding'] is None:
+        if self.embeddings is None:
             raise ValueError("Embeddings must be set before creating taxonomy.")
         if not isinstance(self.n_clusters, int) or self.n_clusters <= 0:
             raise ValueError("Number of clusters must be a positive integer.")
         for key, value in self.topic_levels.items():
-            self.docs_df[key + '_cluster_id'] = fcluster(self.docs_df['linkage_matrix'], value, criterion='distance')
+            self.docs_df[key + '_cluster_id'] = fcluster(self.linkage_matrix, value, criterion='distance')
   
     def check_required_columns(self, required_columns=['text', 'title']):
         for column in required_columns:
