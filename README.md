@@ -19,18 +19,34 @@ Taxonomy Creation:
 * * Title + text of content is embedded using the Universal Sentence Encoder
 * * The embeddings are fed into an agglomerative clustering method to generate a tree
 * * Information about that tree is presented to the user - would like to add more visibility methods here
+  * Also want to add more methods to check taxonomy quality. Making sure a taxonomy meets:
+    Criteria
+1. Taxonomy should have little-to-no overlap between tag values for the same key
+2. Taxonomy should have sufficient overall coverage of documents
+3. The number of URLs tagged for each tag value should be (roughly) normally distributed
+5. The taxonomy should capture overlapping topics across sites
+7. Tag values available for each key should all describe the same aspect of an article
 * * User selects cut off points to create hierarchical taxonomy
 * * Cluster IDs are assigned to content
+ 
+## Agglomerative clustering using wards method 
+<img width="805" height="408" alt="ward-linkage" src="https://github.com/user-attachments/assets/b740c45c-708c-4c35-af7d-de870a105f33" />
+
 ## Example silhouette score plot generated from topic clustering
 <img width="1013" height="701" alt="silhouette" src="https://github.com/user-attachments/assets/a1a5d25a-7827-4d4a-9a2f-b52b261d6b45" />
 
 ## Example dendrogram plot generated from topic clustering
 <img width="814" height="604" alt="dendrogram" src="https://github.com/user-attachments/assets/fce5fa83-ea19-46c3-bcae-f10de329c80e" />
 
+## Example of 4 level taxonomy
+<img width="776" height="480" alt="dendrogram-pretty" src="https://github.com/user-attachments/assets/d2c802e0-533c-40f3-a67b-07b3088f70c5" />
+
 
 * tag naming
 * * Want to implement a generalized base class in this file and extend it with different tag naming methods
 * * This code still needs significant refactoring and is not functional today. Leaving it here so you can see where I'm headed.
+## Example of tfidf method of naming
+<img width="291" height="540" alt="taxonomy-example" src="https://github.com/user-attachments/assets/45d07d06-32cf-4e60-a113-7fc15429de8c" />
 
 Taxonomy Classification:
 * hierarchical classifier:
