@@ -7,7 +7,7 @@ The goals of this work are to:
 * automatically generate names of those tags based on the content within them (WIP)
 * train a classifier to predict the topics of any newly published content (WIP)
 
-Not all of the following goals are fully implemented as of July 2025, marked as WIP. 
+Not all of the following goals are fully implemented as of July 2025, those still in progress are marked as WIP and explained below. 
 
 Taxonomy Creation:
 * wordpress scraping:
