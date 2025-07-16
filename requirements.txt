@@ -6,6 +6,7 @@ nltk==3.9.1
 scikit-learn==1.7.0
 scipy==1.16.0
 spacy==3.8.7
+lightgbm==4.6.0
 pandas==2.2.3
 tensorflow==2.19.0
 tensorflow-hub==0.16.1
