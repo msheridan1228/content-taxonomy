@@ -3,7 +3,7 @@ import pandas as pd
 from hierarchical_content_taxonomy.taxonomy_creation.wordpress_scraping import WordPressScraper
 from hierarchical_content_taxonomy.taxonomy_creation.tag_naming.namer import TagNamer
 from hierarchical_content_taxonomy.taxonomy_creation.cluster_creation import ClusterCreator
-# from hierarchical_content_taxonomy.taxonomy_classification.hierarchical_classifier import TaxonomyClassifier
+from hierarchical_content_taxonomy.taxonomy_classification.hierarchical_classifier import HierarchicalClassifier
 
 class HierarchicalTaxonomy:
     def __init__(self, urls: list[str]):
@@ -39,7 +39,6 @@ class HierarchicalTaxonomy:
         self.data.to_csv(filename, index=False)
         print(f"Data saved to {filename}")
 
-
     def pull_data(self):
         scraper = WordPressScraper(self.urls)
         data = scraper.get_wordpress_data('cleaned_wordpress_data.csv')
@@ -54,16 +53,17 @@ class HierarchicalTaxonomy:
     def create_clusters(self, cluster_distances):
         self.cluster_creator.create_cluster_assignments(cluster_distances)
 
-    def name_clusters(self):
-        tag_namer = TagNamer(self.data)
-        tag_namer.fit_predict()
-        self.tag_columns = tag_namer.tag_columns
-        self.max_level = tag_namer.get_max_level()
-        self.data = tag_namer.data
-        return self.data
+    ## Not complete yet
+    # def name_clusters(self):
+    #     tag_namer = TagNamer(self.data)
+    #     tag_namer.fit_predict()
+    #     self.tag_columns = tag_namer.tag_columns
+    #     self.max_level = tag_namer.get_max_level()
+    #     self.data = tag_namer.data
+    #     return self.data
     
     def classify_taxonomy(self, model_path):
-        classifier = TaxonomyClassifier(model_path, self.data, self.tag_columns)
+        classifier = HierarchicalClassifier(model_path, self.data, self.tag_columns)
         classifier.fit()
         predictions = classifier.predict()
         self.data = predictions
@@ -84,12 +84,6 @@ class HierarchicalTaxonomy:
     def get_max_level(self):
         return self.max_level
 
-    def set_data(self, data):
-        if isinstance(data, pd.DataFrame):
-            self.data = data
-        else:
-            raise ValueError("Data must be a pandas DataFrame.")
-
     def get_top_level_categories(self):
         if self.data is None:
             raise ValueError("Data not set. Please set the data before getting top-level categories.")
@@ -107,6 +101,4 @@ class HierarchicalTaxonomy:
         if not parent.empty:
             return parent.iloc[0]
         else:
-            raise ValueError(f"No parent category found for subcategory: {subcategory}")
-        
-
+            raise ValueError(f"No parent category found for subcategory: {subcategory}")   
