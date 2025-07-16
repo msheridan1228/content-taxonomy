@@ -92,46 +92,4 @@ def pull_top_tfidf_words(tfidf, vectorizer, n):
   return top_words_list
 
 
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC # Pulling rough topic 'names'
-
-# COMMAND ----------
-
-# MAGIC  %run ./utils/tfidf-utils
-
-# COMMAND ----------
-
-key_list = ['topic_level_1_cluster', 'topic_level_2_cluster', 'topic_level_3_cluster', 'topic_level_4_cluster']
-for key in key_list:
-  print(key)
-  topic_clusters = docs_df.groupby([key])['title'].apply(lambda x: ' '.join(x)).reset_index()
-  topic_clusters['title_token'] = topic_clusters['title'].map(clean_title_text)
-  if key in ['topic_level_4_cluster', 'topic_level_3_cluster']:
-      vectorizer = TfidfVectorizer(min_df=0.0001,max_df=.98, stop_words='english',ngram_range=(2,2),  analyzer='word', encoding='latin-1')
-  else:   
-      #altering min/max for topic level 4 for better results
-      vectorizer = TfidfVectorizer(min_df=0.01,max_df=.97, stop_words='english',ngram_range=(2,2),  analyzer='word', encoding='latin-1')  
-  tfidf = vectorizer.fit_transform(topic_clusters['title_token'])
-  topic_clusters[str(key).replace('_cluster', '')] = pull_top_tfidf_words(tfidf, vectorizer, 3)
-  topic_clusters = topic_clusters[[key, str(key).replace('_cluster', '')]]
-  docs_df = docs_df.merge(topic_clusters, how="left", on=key)
-
-# COMMAND ----------
-
-docs_df.sample(10)
-
-# COMMAND ----------
-
-def check_for_dupes(docs_df, tag):
-  num_names = docs_df[tag].nunique()
-  num_clusters = docs_df[str(tag)+'_cluster'].nunique()
-  assert num_names == num_clusters, f'Duplicate cluster names at {tag}. {num_names} tag names, and {num_clusters} clusters'
-
-tag_list = ['topic_level_1', 'topic_level_2', 'topic_level_3', 'topic_level_4']
-for tag in tag_list:
-  check_for_dupes(docs_df, tag)
-
-
 

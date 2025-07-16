@@ -6,7 +6,11 @@
 # MAGIC # **Using Wiki to generate topic names**
 
 # COMMAND ----------
-
+import wikipedia
+import sklearn
+import numpy as np
+import pandas as pd
+import tensorflow_hub as hub
 #test wiki api
 wikipedia.search("covid",results =10)
 
@@ -78,75 +82,7 @@ def return_top_wiki_match(thisSemanticMatchDF, thisLexicalMatchDF):
     combined_all["score"] = (0.1*combined_all["setMatch"]+ 0.1*combined_all["sortMatch"])*(combined_all["semantic_dist"]*100)
     return combined_all['word', 'score'].sort_values(by = "score", ascending=False)[0]
 
-# COMMAND ----------
-
-topic_seed_word_lists = topic_clusters['top_words']
-
-# COMMAND ----------
-
-all_candidate_title_lists_topic =[]
-for x in tqdm(topic_seed_word_lists):
-    all_candidate_title_lists_topic.append(generateCandidateList(x, nlp))
-
-# COMMAND ----------
-
-semanticMatchDF_list_topic = []
-for cl, ql in zip(all_candidate_title_lists_topic, topic_seed_word_lists):
-    semanticMatchDF_list_topic.append(compute_semantic_matches(cl,ql))
-
-# COMMAND ----------
-
-lexicalMatchDF_list_topic = []
-for cl, ql in zip(all_candidate_title_lists_topic, topic_seed_word_lists):
-    lexicalMatchDF_list_topic.append(do_fuzzy_matching(cl,ql))
-
-# COMMAND ----------
-
-combinedDF_list_topic = []
-for s,l in zip(semanticMatchDF_list_topic, lexicalMatchDF_list_topic):
-    combinedDF_list_topic.append(combine_semantic_lexical_dfs(s,l))
-
-# COMMAND ----------
-
-for i in np.arange(0,len(topic_clusters)):
-    print(topic_seed_word_lists[i])
-    print(combinedDF_list_topic[i].head(10))
-    print("\n\n")
-
-# COMMAND ----------
-
-word = "nurse"
-try:
-        word_set = wn.synsets(word)[0]
-        print(word_set.hypernyms())
-        hn_list = sorted([lemma.name() for synset in word_set.hypernyms() for lemma in synset.lemmas()])[:5]
-        print(hn_list)
-        print(type(hn_list))
-except: pass
-
-# COMMAND ----------
-
-test_word = ["nurse"]
-word_embedding = embed(word)
-test_list = ['programs', 'online', 'nursing', 'nurse', 'rn', 'bsn', 'practitioner', 'degree', 'master', 'msn']
-test_sentence = [' '.join(test_list)]
-print(test_sentence)
-sentence_embedding = embed(test_sentence)
-print(len(sentence_embedding[0]))
-print(len(word_embedding[0]))
-messages  = ["nurse", "programs online nursing nurse rn bsn practitioner degree master msn"]
-
-# COMMAND ----------
-
-distance = scipy.spatial.distance.cdist([word_embedding[0]],  [sentence_embedding[0]], "cosine")[0]
-
-# COMMAND ----------
-
 def embedding_similarity(messages_):
   message_embeddings_ = embed(messages_)
   distance = scipy.spatial.distance.cdist([message_embeddings_[0]],  [message_embeddings_[1]], "cosine")[0]
   print("Similarity score =  {}".format(1-distance))
-
-# COMMAND ----------
-
-embedding_similarity(messages)

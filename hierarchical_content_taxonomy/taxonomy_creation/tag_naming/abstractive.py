@@ -6,31 +6,16 @@
 # MAGIC we want abstractive text summarization
 
 # COMMAND ----------
-
-# Importing requirements
-# !pip install --upgraade transformers==4.6.1
-# !pip install seq2seq_trainer
-# !wget https://raw.githubusercontent.com/huggingface/transformers/master/examples/seq2seq/seq2seq_trainer.py
-# !pip install rouge_score
-# !pip install pytorch_lightning==0.7.5
-# !pip install sentencepiece
-# !pip install --upgrade torch==1.8.1
 import transformers
-from transformers import RobertaTokenizerFast
-from transformers import EncoderDecoderModel
 import seq2seq_trainer
+import torch
+import json 
 from seq2seq_trainer import Seq2SeqTrainer
 from transformers import TrainingArguments
 from dataclasses import dataclass, field
 from typing import Optional
-from transformers import T5Tokenizer, T5Config, T5ForConditionalGeneration
-
-# COMMAND ----------
-
-import torch
-import json 
-from transformers import T5Tokenizer, T5ForConditionalGeneration, T5Config
-
+from transformers import T5Tokenizer, T5Config, T5ForConditionalGeneration, RobertaTokenizerFast,  EncoderDecoderModel, T5Tokenizer, T5ForConditionalGeneration, T5Config
+from transformers import pipeline, PegasusForConditionalGeneration, PegasusTokenizer, AutoModelForSeq2SeqLM, AutoTokenizer, SummarizationPipeline
 # COMMAND ----------
 
 model = T5ForConditionalGeneration.from_pretrained('t5-small')
@@ -83,27 +68,15 @@ print ("\n\nSummarized text: \n",output)
 
 # COMMAND ----------
 
-
-# COMMAND ----------
-
-from transformers import PegasusForConditionalGeneration, PegasusTokenizer
-from transformers import M2M100ForConditionalGeneration, M2M100Tokenizer
-
-#import torch
-src_text = [
-    text]
-#model_name = 'google/pegasus-xsum'
+src_text = [text]
 model_name = "facebook/m2m100_418M"
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-#tokenizer = PegasusTokenizer.from_pretrained(model_name)
 tokenizer = M2M100Tokenizer.from_pretrained(model_name)
 model = M2M100ForConditionalGeneration.from_pretrained(model_name).to(device)
-#model = PegasusForConditionalGeneration.from_pretrained(model_name, from_tf=True).to(device)
 tokenizer.src_lang = "en"
 batch = tokenizer(src_text, truncation=True, padding='longest', return_tensors="pt", forced_bos_token_id=tokenizer.get_lang_id("en")).to(device)
 translated = model.generate(**batch)
 tgt_text = tokenizer.batch_decode(translated, skip_special_tokens=True)
-#assert tgt_text[0] == "California's largest electricity provider has turned off power to hundreds of thousands of customers."
 
 # COMMAND ----------
 
@@ -111,18 +84,11 @@ print(tgt_text[0])
 
 # COMMAND ----------
 
-from transformers import pipeline
-from transformers import PegasusForConditionalGeneration, PegasusTokenizer
 summarizer = pipeline("summarization", model="google/pegasus-xsum", tokenizer=PegasusTokenizer.from_pretrained("google/pegasus-xsum"))
 
 # COMMAND ----------
 
 summarizer(text, min_length=1, max_length=20)
-
-# COMMAND ----------
-
-from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
-from transformers import SummarizationPipeline
 
 # COMMAND ----------
 

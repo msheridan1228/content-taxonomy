@@ -1,9 +1,15 @@
 #### Old code compilation from 2021. This code is likely not functional as is. WIP to be turned into an extension of the TagNamer base class
 
 # COMMAND ----------
+import spacy
+import string
+from fuzzywuzzy import fuzz, process
+import pandas as pd
+from sklearn.neighbors import KDTree
 
 #load up a spacy model for grammar parsing and noun chunking
 nlp = spacy.load("en_core_web_sm")
+embed = spacy.load("en_core_web_md")
 
 # COMMAND ----------
 
@@ -54,28 +60,9 @@ def combine_semantic_lexical_dfs(thisSemanticMatchDF, thisLexicalMatchDF):
 
 # COMMAND ----------
 
-
-
-# COMMAND ----------
-
-with open('eng-com_web-public_2018_10K/eng-com_web-public_2018_10K-sentences.txt', 'r') as f:
-    lines = f.readlines()
-
-# COMMAND ----------
-
-print(lines[0])
-all_sentences = [l.split('\t')[1] for l in lines]
-
-# COMMAND ----------
-
 # MAGIC %## Create a search index
 
 # COMMAND ----------
-
-
-from sklearn.neighbors import KDTree
-import numpy as np
-
 
 class ContextNeighborStorage:
     def __init__(self, sentences, model):
@@ -133,18 +120,3 @@ class ContextNeighborStorage:
             if len(distances) == k:
                 break
         return distances, neighbors, contexts
-
-# COMMAND ----------
-
-storage = ContextNeighborStorage(sentences=all_sentences, model=bert)
-storage.process_sentences()
-storage.build_search_index()
-
-# COMMAND ----------
-
-# MAGIC %md ## Query homonymous words
-
-# COMMAND ----------
-
-distances, neighbors, contexts = storage.query(
-     query_sent='It is an investment bank.', query_word='bank', k=5, filter_same_word=True)
