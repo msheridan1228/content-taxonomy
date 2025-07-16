@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-##not finished code
+## Placeholder for now
 ### Want to instantiate a base class that can be extended for different tag naming methods
 # Keep methods consistent using this base class
 class TagNamer:

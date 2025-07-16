@@ -1,4 +1,4 @@
-#### Old code compilation (from 2021! Do not use this code it won't run) To be broken up and refactored into multiple classes in this folder
+#### Old code compilation from 2021. This code is likely not functional as is. WIP to be turned into an extension of the TagNamer base class
 from nltk.stem.porter import *
 from collections import Counter 
 from sklearn.feature_extraction.text import TfidfVectorizer, TfidfTransformer
