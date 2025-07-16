@@ -1,12 +1,16 @@
-# Databricks notebook source
+#### Old code compilation from 2021. This code is likely not functional as is. WIP to be turned into an extension of the TagNamer base class
 from nltk.stem.porter import *
 from collections import Counter 
 from sklearn.feature_extraction.text import TfidfVectorizer, TfidfTransformer
 from nltk.stem import WordNetLemmatizer
+from sklearn.feature_extraction.text import TfidfVectorizer, TfidfTransformer
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+import re
 
 nltk.download('averaged_perceptron_tagger')
 nltk.download('wordnet')
-
+ENGLISH_STOP_WORDS = set(stopwords.words('english'))
 # COMMAND ----------
 
 def tokenize(text):
@@ -86,3 +90,6 @@ def pull_top_tfidf_words(tfidf, vectorizer, n):
     most_occur = return_valid_cluster_title(top_words_list, sorted_words, n)
     top_words_list.append(most_occur)
   return top_words_list
+
+
+
