@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
-
-
+##not finished code
+### Want to instantiate a base class that can be extended for different tag naming methods
+# Keep methods consistent using this base class
 class TagNamer:
     def __init__(self, docs_df):
         self.docs_df = docs_df

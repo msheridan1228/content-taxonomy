@@ -1,13 +1,16 @@
-# Databricks notebook source
+#### Old code compilation (from 2021! Do not use this code it won't run) To be broken up and refactored into multiple classes in this folder
 from nltk.stem.porter import *
 from collections import Counter 
 from sklearn.feature_extraction.text import TfidfVectorizer, TfidfTransformer
 from nltk.stem import WordNetLemmatizer
 from sklearn.feature_extraction.text import TfidfVectorizer, TfidfTransformer
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+import re
 
 nltk.download('averaged_perceptron_tagger')
 nltk.download('wordnet')
-
+ENGLISH_STOP_WORDS = set(stopwords.words('english'))
 # COMMAND ----------
 
 def tokenize(text):
@@ -130,18 +133,5 @@ tag_list = ['topic_level_1', 'topic_level_2', 'topic_level_3', 'topic_level_4']
 for tag in tag_list:
   check_for_dupes(docs_df, tag)
 
-# COMMAND ----------
 
-export_columns = ['url', 'title', 'site', 'topic_level_1','topic_level_2','topic_level_3','topic_level_4', 'topic_level_1_cluster','topic_level_2_cluster', 'topic_level_3_cluster','topic_level_4_cluster']
-docs_df.to_csv('/users/msheridan/documents/marthasblog-clusters.csv')
 
-# COMMAND ----------
-
-# MAGIC %md  #Pickling
-
-# COMMAND ----------
-
-filepath = '/users/msheridan/documents/marthasblog-clusters.pkl'
-data_dict = docs_df.loc[:, docs_df.columns].to_dict(orient='records')
-with open(filepath, "wb") as f:
-  cloudpickle.dump(data_dict, f)
