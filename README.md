@@ -23,6 +23,7 @@ Taxonomy Creation:
 * * Cluster IDs are assigned to content
 ## Example silhouette score plot generated from topic clustering
 <img width="1013" height="701" alt="silhouette" src="https://github.com/user-attachments/assets/a1a5d25a-7827-4d4a-9a2f-b52b261d6b45" />
+
 ## Example dendrogram plot generated from topic clustering
 <img width="814" height="604" alt="dendrogram" src="https://github.com/user-attachments/assets/fce5fa83-ea19-46c3-bcae-f10de329c80e" />
 
