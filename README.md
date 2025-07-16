@@ -21,7 +21,11 @@ Taxonomy Creation:
 * * Information about that tree is presented to the user - would like to add more visibility methods here
 * * User selects cut off points to create hierarchical taxonomy
 * * Cluster IDs are assigned to content
-## insert images
+## Example silhouette score plot generated from topic clustering
+<img width="1013" height="701" alt="silhouette" src="https://github.com/user-attachments/assets/a1a5d25a-7827-4d4a-9a2f-b52b261d6b45" />
+## Example dendrogram plot generated from topic clustering
+<img width="814" height="604" alt="dendrogram" src="https://github.com/user-attachments/assets/fce5fa83-ea19-46c3-bcae-f10de329c80e" />
+
 
 * tag naming
 * * Want to implement a generalized base class in this file and extend it with different tag naming methods
