@@ -53,6 +53,6 @@ Github copilot was used in refactoring my existing very old and messy code on th
 ## Example of 4 level taxonomy
 <img width="776" height="480" alt="dendrogram-pretty" src="https://github.com/user-attachments/assets/d2c802e0-533c-40f3-a67b-07b3088f70c5" />
 
-## Example of tfidf method of naming
+## Example of 4 level taxonomy generated using tfidf method of naming
 <img width="291" height="540" alt="taxonomy-example" src="https://github.com/user-attachments/assets/45d07d06-32cf-4e60-a113-7fc15429de8c" />
 
