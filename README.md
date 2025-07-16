@@ -19,13 +19,11 @@ Taxonomy Creation:
 * * Title + text of content is embedded using the Universal Sentence Encoder
 * * The embeddings are fed into an agglomerative clustering method to generate a tree
 * * Information about that tree is presented to the user - would like to add more visibility methods here
-  * Also want to add more methods to check taxonomy quality. Making sure a taxonomy meets:
-    Criteria
-1. Taxonomy should have little-to-no overlap between tag values for the same key
-2. Taxonomy should have sufficient overall coverage of documents
-3. The number of URLs tagged for each tag value should be (roughly) normally distributed
-5. The taxonomy should capture overlapping topics across sites
-7. Tag values available for each key should all describe the same aspect of an article
+  * Also want to add more methods to check taxonomy quality. Making sure a taxonomy meets the following criteria:
+     1. Taxonomy should have little-to-no overlap between tag values for the same level
+     2. The number of URLs tagged for each tag value should be (roughly) normally distributed
+     3. The taxonomy should capture overlapping topics across sites
+     4. Tag values available for each key should all describe the same aspect of an article
 * * User selects cut off points to create hierarchical taxonomy
 * * Cluster IDs are assigned to content
 
@@ -53,6 +51,6 @@ Github copilot was used in refactoring my existing very old and messy code on th
 ## Example of 4 level taxonomy
 <img width="776" height="480" alt="dendrogram-pretty" src="https://github.com/user-attachments/assets/d2c802e0-533c-40f3-a67b-07b3088f70c5" />
 
-## Example of 4 level taxonomy generated using tfidf method of naming
+## Example of 4 level taxonomy generated
 <img width="291" height="540" alt="taxonomy-example" src="https://github.com/user-attachments/assets/45d07d06-32cf-4e60-a113-7fc15429de8c" />
 
