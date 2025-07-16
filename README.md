@@ -28,6 +28,18 @@ Taxonomy Creation:
 7. Tag values available for each key should all describe the same aspect of an article
 * * User selects cut off points to create hierarchical taxonomy
 * * Cluster IDs are assigned to content
+
+* tag naming
+* * Want to implement a generalized base class in this file and extend it with different tag naming methods
+* * This code still needs significant refactoring and is not functional today. Leaving it here so you can see where I'm headed.
+
+Taxonomy Classification:
+* hierarchical classifier:
+* * This file contains code to train a classifier to predict the lowest (most granular) taxonomy topic and return the full topic tree
+* * This code still is a work in progress. Need to add taxonomy look up, as well as data splitting, model tuning and evaluation. 
+
+Github copilot was used in refactoring my existing very old and messy code on this topic
+
  
 ## Agglomerative clustering using wards method 
 <img width="805" height="408" alt="ward-linkage" src="https://github.com/user-attachments/assets/b740c45c-708c-4c35-af7d-de870a105f33" />
@@ -41,17 +53,6 @@ Taxonomy Creation:
 ## Example of 4 level taxonomy
 <img width="776" height="480" alt="dendrogram-pretty" src="https://github.com/user-attachments/assets/d2c802e0-533c-40f3-a67b-07b3088f70c5" />
 
-
-* tag naming
-* * Want to implement a generalized base class in this file and extend it with different tag naming methods
-* * This code still needs significant refactoring and is not functional today. Leaving it here so you can see where I'm headed.
 ## Example of tfidf method of naming
 <img width="291" height="540" alt="taxonomy-example" src="https://github.com/user-attachments/assets/45d07d06-32cf-4e60-a113-7fc15429de8c" />
-
-Taxonomy Classification:
-* hierarchical classifier:
-* * This file contains code to train a classifier to predict the lowest (most granular) taxonomy topic and return the full topic tree
-* * This code still is a work in progress. Need to add taxonomy look up, as well as data splitting, model tuning and evaluation. 
-
-Github copilot was used in refactoring my existing very old and messy code on this topic
 
