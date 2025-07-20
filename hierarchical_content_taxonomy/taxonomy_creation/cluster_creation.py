@@ -103,6 +103,11 @@ class ClusterCreator:
         self.n_clusters = len(cluster_distances)
         self.topic_levels = {'topic_level_' + str(i+1): cluster_distances[i] for i in range(self.n_clusters)}
 
+    def get_num_clusters(self) -> int:
+        if not hasattr(self, 'n_clusters'):
+            raise ValueError("Number of clusters has not been set. Please set cluster distances first.")
+        return self.n_clusters
+
     def assign_cluster_labels(self) -> None:
         if self.embeddings is None:
             raise ValueError("Embeddings must be set before creating taxonomy.")
