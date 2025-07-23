@@ -55,8 +55,8 @@ class HierarchicalClassifier(BaseEstimator, ClassifierMixin):
         if not hasattr(self, 'model_pipeline'):
             raise ValueError("Model pipeline not fitted. Please run fit() first.")
         if X is None or y is None:
-            X = self.X_test
-            y = self.y_test
+            X = self.X_train
+            y = self.y_train
         score = self.model_pipeline.score(X, y)
         return score
 
@@ -82,37 +82,5 @@ class HierarchicalClassifier(BaseEstimator, ClassifierMixin):
             return parent_categories.iloc[0]
         else:
             return None
-
-    # def lookup_parent_category(self, subcategory: int, level: int) -> int:
-    #     parent_level = level - 1
-    #     if parent_level <= 0:
-    #         return None
-    #     parent_category = self.data[self.data[f'topic_level_{level}_cluster_id'] == subcategory][f'topic_level_{parent_level}_cluster_id']
-    #     if not parent_category.empty:
-    #         return parent_category.iloc[0]
-    #     else:
-    #         return None
-
-    # ## transform to a general function that takes in a dataframe and returns a pivot table
-    # def set_tag_level_columns(self) -> None:
-    #     cluster_columns = [f'topic_level_{i+1}_cluster_id' for i in range(self.num_levels)]
-    #     tag_name_columns = [f'topic_level_{i+1}' for i in range(self.num_levels)]
-    #     self.cluster_columns = cluster_columns
-    #     self.tag_columns = tag_name_columns
-    #     return None
-
-    # def create_cluster_pivot(self) -> pd.DataFrame:
-    #     self.set_tag_level_columns()
-    #     docs_df = self.data.copy()
-    #     if not all(col in docs_df.columns for col in self.cluster_columns):
-    #         raise ValueError("DataFrame must contain all cluster columns.")
-    #     if 'url' not in docs_df.columns:
-    #         raise ValueError("DataFrame must contain 'url' column.")
-    #     cluster_pivot = pd.pivot_table(docs_df[self.cluster_columns + ['url']], index=self.cluster_columns, aggfunc=pd.Series.nunique)
-    #     cluster_pivot = cluster_pivot.sort_values(self.cluster_columns, ascending=True)
-    #     cluster_pivot = cluster_pivot.reset_index()
-    #     cluster_pivot = cluster_pivot.drop(columns='url')
-    #     self.cluster_pivot = cluster_pivot
-    #     return cluster_pivot
 
       
