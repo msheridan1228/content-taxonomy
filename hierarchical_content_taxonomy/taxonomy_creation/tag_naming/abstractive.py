@@ -1,104 +1,44 @@
 #### Old code compilation from 2021. This code is likely not functional as is. WIP to be turned into an extension of the TagNamer base class
-
-# COMMAND ----------
-
-# MAGIC %md # Summarization with one-two words
-# MAGIC we want abstractive text summarization
-
-# COMMAND ----------
 import transformers
-import seq2seq_trainer
-import torch
-import json 
-from seq2seq_trainer import Seq2SeqTrainer
-from transformers import TrainingArguments
-from dataclasses import dataclass, field
-from typing import Optional
-from transformers import T5Tokenizer, T5Config, T5ForConditionalGeneration, RobertaTokenizerFast,  EncoderDecoderModel, T5Tokenizer, T5ForConditionalGeneration, T5Config
-from transformers import pipeline, PegasusForConditionalGeneration, PegasusTokenizer, AutoModelForSeq2SeqLM, AutoTokenizer, SummarizationPipeline
-# COMMAND ----------
+import numpy as np
+import pandas as pd
+from transformers import pipeline, AutoModelForSeq2SeqLM, AutoTokenizer, SummarizationPipeline
+from hierarchical_content_taxonomy.taxonomy_creation.tag_naming.namer import TagNamer
 
-model = T5ForConditionalGeneration.from_pretrained('t5-small')
-tokenizer = T5Tokenizer.from_pretrained('t5-small')
-device = torch.device('cpu')
-type(tokenizer)
+##inherit from TagNamer base class
+##lowkey not impressed with the abstractive stuff. results are not great rn
+class AbstractiveTagNamer(TagNamer):
 
-# COMMAND ----------
+    def __init__(self, data, num_levels, abstractive_model = "facebook/bart-large-cnn"):
+        super().__init__(data, num_levels)
+        self.model_name = abstractive_model
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+        self.model = AutoModelForSeq2SeqLM.from_pretrained(self.model_name)
+        self.summarizer = pipeline("summarization", model=self.model, tokenizer=self.tokenizer)
 
-topic_clusters = docs_df.groupby(["topic_level_4"])['title'].apply(lambda x: '. '.join(x)).reset_index()
-topic_clusters.head()
+    def generate_lowest_level_names(self):
+        data = self.data.copy()
+        cluster_column_name = f'topic_level_{self.num_levels}_cluster_id'
+        lowest_level_titles = data.groupby([cluster_column_name])['title'].apply(lambda x: '. '.join(x)).reset_index()
+        lowest_level_titles[f'topic_level_{self.num_levels}'] = lowest_level_titles.apply(lambda row: self.convert_to_tag_name(self.summarize_text(row['title'], min_length=1, max_length=6)), axis=1)
+        name_data = pd.merge(data, lowest_level_titles[[cluster_column_name, f'topic_level_{self.num_levels}']], on=cluster_column_name, how='left')
+        self.data = name_data
+        return self.data
 
-# COMMAND ----------
+    def generate_parent_level_names(self):
+        data = self.data.copy()
+        for level in range(self.num_levels - 1, 0, -1):
+            cluster_column_name = f'topic_level_{level}_cluster_id'
+            child_column_name = f'topic_level_{level + 1}_cluster_id'
+            child_cluster_names = data.groupby([cluster_column_name])[child_column_name].apply(lambda x: '. '.join(x)).reset_index()
+            parent_titles = data.apply(lambda row: self.convert_to_tag_name(self.summarize_text(row[child_column_name], min_length=1, max_length=6)), axis=1)
+            data = pd.merge(data, parent_titles[[cluster_column_name, f'topic_level_{level}']], on=cluster_column_name, how='left')
+        self.data = data
+        return self.data
 
-#text = docs_df['title'][1000]
-#text = tag_meta['top_articles'][5]
-text = topic_clusters['title'][200]
-text = ' '.join(text.split())[:1000]
-print(len(text))
-print(text)
+    def summarize_text(self, text, max_new_tokens=15, min_length=1):
+        text = text.replace('_', ' ')
+        text = ' '.join(text.split())[:1000]
+        summary_dict = self.summarizer(text, max_new_tokens=max_new_tokens, min_length=min_length)
+        return summary_dict[0]['summary_text']
 
-# COMMAND ----------
-
-text = "summarize:" + text
-text
-
-# COMMAND ----------
-
-tokenized_text = tokenizer.encode(text, return_tensors="pt").to(device)
-
-# COMMAND ----------
-
-# summmarize 
-summary_ids = model.generate(tokenized_text,
-                                    num_beams=4,
-                                    no_repeat_ngram_size=2,
-                                    min_length=1,
-                                    max_length=2,
-                                    early_stopping=True)
-
-# COMMAND ----------
-
-output = tokenizer.decode(summary_ids[0], skip_special_tokens=True)
-
-# COMMAND ----------
-
-print("original text: \n", text)
-print ("\n\nSummarized text: \n",output)
-
-
-# COMMAND ----------
-
-src_text = [text]
-model_name = "facebook/m2m100_418M"
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
-tokenizer = M2M100Tokenizer.from_pretrained(model_name)
-model = M2M100ForConditionalGeneration.from_pretrained(model_name).to(device)
-tokenizer.src_lang = "en"
-batch = tokenizer(src_text, truncation=True, padding='longest', return_tensors="pt", forced_bos_token_id=tokenizer.get_lang_id("en")).to(device)
-translated = model.generate(**batch)
-tgt_text = tokenizer.batch_decode(translated, skip_special_tokens=True)
-
-# COMMAND ----------
-
-print(tgt_text[0])
-
-# COMMAND ----------
-
-summarizer = pipeline("summarization", model="google/pegasus-xsum", tokenizer=PegasusTokenizer.from_pretrained("google/pegasus-xsum"))
-
-# COMMAND ----------
-
-summarizer(text, min_length=1, max_length=20)
-
-# COMMAND ----------
-
-model_name = 'lincoln/mbart-mlsum-automatic-summarization'
-
-loaded_tokenizer = AutoTokenizer.from_pretrained(model_name)
-loaded_model = AutoModelForSeq2SeqLM.from_pretrained(model_name, from_tf=True)
-
-nlp = SummarizationPipeline(model=loaded_model, tokenizer=loaded_tokenizer)
-
-# COMMAND ----------
-
-nlp(text)
