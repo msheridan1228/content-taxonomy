@@ -3,7 +3,7 @@ import re
 import tensorflow_hub as hub
 
 def clean_html(text):
-  if text == None:
+  if text is None:
     return " "
   text = re.sub('>', '> ',text)
   text = re.sub('<', ' <',text)

@@ -10,7 +10,7 @@ from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.linear_model import LogisticRegression 
 import lightgbm as lgb
 
-from hierarchical_content_taxonomy.taxonomy_creation.text_cleaning import clean_html_top_1000, embed
+from hierarchical_content_taxonomy.taxonomy_creation.text_cleaning import clean_html, first_n_words, embed
 
 class HierarchicalClassifier(BaseEstimator, ClassifierMixin):
     def __init__(self, data = pd.DataFrame(), model=lgb.LGBMClassifier(), num_levels: int = 4):
@@ -32,12 +32,16 @@ class HierarchicalClassifier(BaseEstimator, ClassifierMixin):
         title_selector = ItemSelector(key = 'title')
         url_selector = ItemSelector(key = 'url')
 
-        clean_html = CleanHtmlTransformer(cleaner_function=clean_html_top_1000)
-        title_pipeline = Pipeline([('title_selector', title_selector),
-                            ('title_process', clean_html)])
-        text_pipeline = Pipeline([('text_selector', text_selector),    
-                            ('text_process', clean_html)])
+        def clean_html_first_1000(text: str) -> str:
+            cleaned = clean_html(text)
+            return first_n_words(cleaned, 1000)
         
+        clean_html_transformer = CleanHtmlTransformer(cleaner_function=clean_html_first_1000)
+        title_pipeline = Pipeline([('title_selector', title_selector),
+                            ('title_process', clean_html_transformer)])
+        text_pipeline = Pipeline([('text_selector', text_selector),    
+                            ('text_process', clean_html_transformer)])
+
         embedder = EmbedTextTransformer(embed)
 
         model_pipeline = Pipeline([
@@ -140,27 +144,33 @@ class ItemSelector(BaseEstimator, TransformerMixin):
       
 class CleanHtmlTransformer( BaseEstimator, TransformerMixin ):   
   def __init__ (self, cleaner_function):
-      self.cleaner_function_ = cleaner_function
+      self.cleaner_function = cleaner_function
   #Return self nothing else to do here    
   def fit( self, X, y = None ):
       return self 
 
   #Method that describes what we need this transformer to do
   def transform( self, X, y = None ):
-      clean_text = self.cleaner_function_(X)
+      # Handle both Series and individual strings
+      if hasattr(X, 'apply'):
+          # If X is a pandas Series, apply the function to each element
+          clean_text = X.apply(self.cleaner_function)
+      else:
+          # If X is a single string, apply directly
+          clean_text = self.cleaner_function(X)
       return clean_text
 
 class EmbedTextTransformer( BaseEstimator, TransformerMixin ):   
-  def __init__ (self, parser):
+  def __init__ (self, embedder):
 #       self.embedder_ = hub.load(parser)
-      self.embedder_ = parser
+      self.embedder = embedder
   #Return self nothing else to do here    
   def fit( self, X, y = None ):
       return self 
 
   #Method that describes what we need this transformer to do
   def transform( self, X, y = None ):
-      embedding = self.embedder_(X) 
+      embedding = self.embedder(X) 
       return embedding
 
       
