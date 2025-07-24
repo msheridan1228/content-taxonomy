@@ -1,5 +1,6 @@
 from bs4 import BeautifulSoup
 import re
+import tensorflow_text as text 
 import tensorflow_hub as hub
 
 def clean_html(text):
