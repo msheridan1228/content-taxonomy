@@ -36,7 +36,7 @@ Taxonomy Classification:
 * * This file contains code to train a classifier to predict the lowest (most granular) taxonomy topic and return the full topic tree
 * * This code still is a work in progress. Need to add taxonomy look up, as well as data splitting, model tuning and evaluation. 
 
-Github copilot was used in refactoring my existing very old and messy code on this topic
+Github copilot autocomplete was used in refactoring my existing very old and messy code on this topic
 
  
 ## Agglomerative clustering using wards method 
