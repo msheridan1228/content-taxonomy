@@ -3,10 +3,12 @@ import fastcluster as fc
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from sklearn.pipeline import Pipeline
 import tensorflow_hub as hub
 from sklearn import metrics
 from scipy.cluster.hierarchy import fcluster
 from sklearn.cluster import AgglomerativeClustering 
+from hierarchical_content_taxonomy.text_cleaning import CleanHtmlTransformer, EmbeddingTransformer, TitleTextConcatenator
 
 class ClusterCreator:
     def __init__(self, docs_df: pd.DataFrame, method='ward', metric='euclidean', embed_module_url = "https://tfhub.dev/google/universal-sentence-encoder-multilingual/3"):
@@ -14,6 +16,13 @@ class ClusterCreator:
         self.embedder = hub.load(embed_module_url)
         self.method = method
         self.metric = metric
+        self.clean_text_transformer = CleanHtmlTransformer()
+        self.embedding_transformer = EmbeddingTransformer(module_url=embed_module_url)
+        self.text_pipeline = Pipeline([
+                ('concat', TitleTextConcatenator()),
+                ('clean_html', self.clean_text_transformer),
+                ('embed', self.embedding_transformer)
+            ])
 
     def get_cluster_info(self) -> None:
         self.check_required_columns()
@@ -37,8 +46,7 @@ class ClusterCreator:
         self.embedder = embedder
 
     def create_embeddings(self) -> None:
-        self.docs_df['title_plus_text'] = self.docs_df['title'] + '. ' + self.docs_df['text']
-        self.embeddings = self.embedder(self.docs_df['title_plus_text']).numpy()
+        self.embeddings = self.text_pipeline.fit(self.docs_df).numpy()
         self.docs_df['text_embedding'] = self.embeddings.tolist()
 
     def create_linkage_matrix(self) -> None:
@@ -102,6 +110,11 @@ class ClusterCreator:
         self.cluster_distances = cluster_distances
         self.n_clusters = len(cluster_distances)
         self.topic_levels = {'topic_level_' + str(i+1): cluster_distances[i] for i in range(self.n_clusters)}
+
+    def get_num_clusters(self) -> int:
+        if not hasattr(self, 'n_clusters'):
+            raise ValueError("Number of clusters has not been set. Please set cluster distances first.")
+        return self.n_clusters
 
     def assign_cluster_labels(self) -> None:
         if self.embeddings is None:
