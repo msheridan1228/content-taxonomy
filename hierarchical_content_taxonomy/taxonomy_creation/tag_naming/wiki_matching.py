@@ -4,6 +4,7 @@ import wikipedia
 import sklearn
 import numpy as np
 import pandas as pd
+import tensorflow_text
 import tensorflow_hub as hub
 import scipy.spatial.distance
 import spacy
@@ -25,19 +26,16 @@ class WikiMatchingTagNamer(TagNamer):
         else:
             self.nlp_model = nlp_model  # spaCy model for noun chunk extraction
 
-        module_url = "https://tfhub.dev/google/universal-sentence-encoder/4"
+        module_url = "https://tfhub.dev/google/universal-sentence-encoder-multilingual/3"
         self.embed = hub.load(module_url)
         
         # Test wiki api
         test_results = wikipedia.search("cats", results=10)
         print(f"Wikipedia API test successful. Found {len(test_results)} results for 'cats'")
 
-    def generate_tag_names(self):
-        self.generate_lowest_level_names()
-        self.generate_parent_level_names()
-        return self.data
-
     def generate_lowest_level_names(self):
+        super().generate_lowest_level_names()
+
         data = self.data.copy()
         cluster_column_name = f'topic_level_{self.num_levels}_cluster_id'
         cluster_titles = data.groupby([cluster_column_name])['title'].apply(lambda x: '. '.join(x)).reset_index()
@@ -51,18 +49,19 @@ class WikiMatchingTagNamer(TagNamer):
         return self.data
 
     def generate_parent_level_names(self):
+        super().generate_parent_level_names()
+
         data = self.data.copy()
         for level in np.arange(self.num_levels - 1, 0, -1):
             cluster_column_name = f'topic_level_{level}_cluster_id'
-            child_column_name = f'topic_level_{level + 1}'
             
             # Create one representative document per parent cluster (concatenated child tag names)
-            parent_clusters = data.groupby([cluster_column_name])[child_column_name].apply(
+            parent_clusters = data.groupby([cluster_column_name])['title'].apply(
                 lambda x: ' '.join(x.unique())
             ).reset_index()
             
             # Generate seed words for ALL parent clusters at once using TF-IDF comparison
-            all_parent_documents = parent_clusters[child_column_name].tolist()
+            all_parent_documents = parent_clusters['title'].tolist()
             all_seed_words = generate_seed_words_from_tfidf(all_parent_documents, 5)
             
             # Assign seed words back to each parent cluster

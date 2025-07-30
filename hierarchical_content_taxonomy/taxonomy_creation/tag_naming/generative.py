@@ -28,7 +28,7 @@ class GenerativeTagNamer(TagNamer):
     def __init__(self, 
                  data: pd.DataFrame, 
                  num_levels: int,
-                 model_name: str = "bert-base-uncased",
+                 model_name: str = "gpt2",
                  use_quantization: bool = True,
                  max_new_tokens: int = 20,
                  temperature: float = 0.2,
@@ -61,13 +61,8 @@ class GenerativeTagNamer(TagNamer):
         self.model = AutoModelForCausalLM.from_pretrained(self.model_name, device_map=self.device)
         print(f"✓ Successfully loaded model: {self.model_name}")
 
-    def generate_tag_names(self) -> pd.DataFrame:
-        """Generate tag names for all hierarchical levels."""
-        self.generate_lowest_level_names()
-        self.generate_parent_level_names()
-        return self.data
-
     def generate_lowest_level_names(self) -> pd.DataFrame:
+        super().generate_lowest_level_names()
         """Generate tag names for the lowest (most specific) level clusters."""
         data = self.data.copy()
         cluster_column_name = f'topic_level_{self.num_levels}_cluster_id'
@@ -94,6 +89,7 @@ class GenerativeTagNamer(TagNamer):
         return self.data
 
     def generate_parent_level_names(self) -> pd.DataFrame:
+        super().generate_parent_level_names()
         """Generate tag names for parent level clusters."""
         data = self.data.copy()
         
@@ -133,7 +129,7 @@ class GenerativeTagNamer(TagNamer):
         
         # Generate tag using the model
         generated_tag = self._generate_with_model(prompt)
-        
+        print(generated_tag)
         # Clean and format the generated tag
         cleaned_tag = self._clean_generated_tag(generated_tag)
         # Check if the tag already exists or is unavailable
@@ -202,23 +198,27 @@ class GenerativeTagNamer(TagNamer):
 
     def _generate_with_model(self, prompt: str) -> str:
         """Generate text using the language model."""
-        try:
-            input_ids = self.tokenizer(prompt).input_ids
-            generated_tokens = self.model.generate(input_ids, temperature=self.temperature, max_new_tokens=self.max_new_tokens)
-            generated_text = self.tokenizer.decode(generated_tokens[0], skip_special_tokens=True)
+        # try:
+        input_ids = self.tokenizer(prompt).input_ids
+        print(f"Input IDs: {input_ids}")
+        generated_tokens = self.model.generate(input_ids, temperature=self.temperature, max_new_tokens=self.max_new_tokens)
+        print(f"Generated Tokens: {generated_tokens}")
+        generated_text = self.tokenizer.decode(generated_tokens[0], skip_special_tokens=True)
+        print(f"Generated Text: {generated_text}")
+        
+        # # Extract generated text
+        # generated_text = outputs[0]['generated_text'].strip()
+        
+        # Extract just the tag part (first line or until punctuation)
+        tag = generated_text.split('\n')[0].split('.')[0].split(',')[0].strip()
+        
+        return tag
             
-            # # Extract generated text
-            # generated_text = outputs[0]['generated_text'].strip()
-            
-            # Extract just the tag part (first line or until punctuation)
-            tag = generated_text.split('\n')[0].split('.')[0].split(',')[0].strip()
-            
-            return tag
-            
-        except Exception as e:
-            print(f"Error generating with model: {e}")
+        # except Exception as e:
+        #     print(f"Error generating with model: {e}")
+        #     break
             # Fallback to simple keyword extraction
-            return "error_tag"
+            # return "error_tag"
 
 
     def _clean_generated_tag(self, tag: str) -> str:

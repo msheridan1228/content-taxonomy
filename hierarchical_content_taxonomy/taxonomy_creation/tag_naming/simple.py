@@ -9,14 +9,10 @@ class SimpleTagNamer(TagNamer):
         super().__init__(data, num_levels)
         self.existing_tags = set()
     
-    def generate_tag_names(self) -> pd.DataFrame:
-        """Generate tag names for all hierarchical levels."""
-        self.generate_lowest_level_names()
-        self.generate_parent_level_names()
-        return self.data
-    
     def generate_lowest_level_names(self) -> pd.DataFrame:
         """Generate tag names for the lowest (most specific) level clusters."""
+        super().generate_lowest_level_names()
+
         data = self.data.copy()
         cluster_column_name = f'topic_level_{self.num_levels}_cluster_id'
         
@@ -43,6 +39,8 @@ class SimpleTagNamer(TagNamer):
     
     def generate_parent_level_names(self) -> pd.DataFrame:
         """Generate tag names for parent level clusters."""
+        super().generate_parent_level_names()
+
         data = self.data.copy()
         
         for level in range(self.num_levels - 1, 0, -1):

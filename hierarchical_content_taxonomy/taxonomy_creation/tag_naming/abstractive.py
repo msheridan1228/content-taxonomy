@@ -16,12 +16,8 @@ class AbstractiveTagNamer(TagNamer):
         self.model = AutoModelForSeq2SeqLM.from_pretrained(self.model_name)
         self.summarizer = pipeline("summarization", model=self.model, tokenizer=self.tokenizer)
 
-    def generate_tag_names(self):
-        self.generate_lowest_level_names()
-        self.generate_parent_level_names()
-        return self.data
-
     def generate_lowest_level_names(self):
+        super().generate_lowest_level_names()
         data = self.data.copy()
         cluster_column_name = f'topic_level_{self.num_levels}_cluster_id'
         lowest_level_titles = data.groupby([cluster_column_name])['title'].apply(lambda x: '. '.join(x)).reset_index()
@@ -31,6 +27,7 @@ class AbstractiveTagNamer(TagNamer):
         return self.data
 
     def generate_parent_level_names(self):
+        super().generate_parent_level_names()
         data = self.data.copy()
         for level in range(self.num_levels - 1, 0, -1):
             cluster_column_name = f'topic_level_{level}_cluster_id'
