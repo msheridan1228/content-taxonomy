@@ -103,4 +103,3 @@ def first_n_words(text, n=1000):
 def is_min_text(len_text, min_len=20):
   return len_text > min_len
 
-

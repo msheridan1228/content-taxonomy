@@ -6,7 +6,7 @@ import re
 import tensorflow as tf
 import tensorflow_text as text
 import requests
-from hierarchical_content_taxonomy.taxonomy_creation.text_cleaning import clean_html, first_n_words, num_words, embed
+from hierarchical_content_taxonomy.text_cleaning import clean_html, first_n_words, num_words
 
 class WordPressScraper:
   def __init__(self, urls: list[str]):

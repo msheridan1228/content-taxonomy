@@ -48,15 +48,16 @@ class HierarchicalClassifier(BaseEstimator, ClassifierMixin):
         return self.X_train, self.X_test, self.y_train, self.y_test
 
     def fit(self):
+        if not hasattr(self, 'X_train') or not hasattr(self, 'y_train'):
+            self.test_train_split()
         self.model_pipeline.fit(self.X_train, self.y_train)
         return self.model_pipeline
     
     def score(self, X=None, y=None):
-        if not hasattr(self, 'model_pipeline'):
-            raise ValueError("Model pipeline not fitted. Please run fit() first.")
         if X is None or y is None:
-            X = self.X_train
-            y = self.y_train
+            self.test_train_split()
+            X = self.X_test
+            y = self.y_test
         score = self.model_pipeline.score(X, y)
         return score
 
@@ -83,4 +84,4 @@ class HierarchicalClassifier(BaseEstimator, ClassifierMixin):
         else:
             return None
 
-      
+    

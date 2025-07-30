@@ -1,88 +1,114 @@
-#### Old code compilation from 2021. This code is likely not functional as is. WIP to be turned into an extension of the TagNamer base class
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC # **Using Wiki to generate topic names**
-
-# COMMAND ----------
+#### Wikipedia-based tag naming for hierarchical content taxonomy
+from torch import ge
 import wikipedia
 import sklearn
 import numpy as np
 import pandas as pd
 import tensorflow_hub as hub
-#test wiki api
-wikipedia.search("covid",results =10)
-
-# COMMAND ----------
-
-module_url = "https://tfhub.dev/google/universal-sentence-encoder/4"
-embed = hub.load(module_url)
-
-# COMMAND ----------
-
-#generates a list of candidate titles given a list of seed words
-def generateCandidateList(wordList, nlp):
-    # get the top 10 article title results from wikipedia
-    titleList = []
-    for thisWord in wordList:
-        neighbors_10 = wikipedia.search(thisWord,results =10)
-        titleList.append(neighbors_10)
-
-    titleList=np.array(titleList).ravel()
-
-    #take the titles and use the spacy model to turn parse them into noun chunks, then de-dupe
-    noun_chunk_list = []
-    for candidate in titleList:
-        doc = nlp(str(candidate))
-        for chunk in doc.noun_chunks:
-            noun_chunk_list.append(chunk.text)
-
-    noun_chunk_list = np.unique(noun_chunk_list).ravel()
-
-    #combine original title list and noun chunk list
-    #noun_chunk_and_title_list = np.concatenate((noun_chunk_list,titleList),axis= None) 
-    #or actually lets not add in the original titles
-    noun_chunk_and_title_list = noun_chunk_list
-
-
-    #extract all bigrams from noun chunk list and original title list
-    ngram_noun_chunk_and_title_list = []
-    for thischunk in noun_chunk_and_title_list:
-        vect = sklearn.feature_extraction.text.CountVectorizer(ngram_range=(1,2))
-        try:
-            vect.fit([thischunk])
-            for x in vect.get_feature_names():
-                ngram_noun_chunk_and_title_list.append(x)
-        except:
-            continue
-
-
-    #take all of the above and create a large candidate list        
-    large_candidate_list = np.concatenate((ngram_noun_chunk_and_title_list, noun_chunk_list),axis=0)
-    large_candidate_list =[str.lower(x) for x in large_candidate_list]
-    large_candidate_list= np.unique(large_candidate_list)
+import scipy.spatial.distance
+import spacy
+from hierarchical_content_taxonomy.taxonomy_creation.tag_naming.namer import TagNamer
+from hierarchical_content_taxonomy.taxonomy_creation.tag_naming.tfidf import generate_seed_words_from_tfidf
+from hierarchical_content_taxonomy.text_cleaning import clean_html
+class WikiMatchingTagNamer(TagNamer):
     
-    #should we de-dupe more intelligently?
-    
-    #the papers also have additional filters
-    # only use candidates that have a wiki page of their own
-    # use RACO similarity as a filtering mechanism this is based on a deprecated wiki API
-    
-    return large_candidate_list
+    def __init__(self, data, num_levels, nlp_model=None):
+        super().__init__(data, num_levels)
+        
+        # Set default spaCy model if none provided
+        if nlp_model is None:
+            try:
+                self.nlp_model = spacy.load("en_core_web_sm")
+            except OSError:
+                print("Warning: en_core_web_sm not found. Install with: python -m spacy download en_core_web_sm")
+                self.nlp_model = None
+        else:
+            self.nlp_model = nlp_model  # spaCy model for noun chunk extraction
 
-# MAGIC %md
-# MAGIC ## Mapping to wiki search
+        module_url = "https://tfhub.dev/google/universal-sentence-encoder/4"
+        self.embed = hub.load(module_url)
+        
+        # Test wiki api
+        test_results = wikipedia.search("cats", results=10)
+        print(f"Wikipedia API test successful. Found {len(test_results)} results for 'cats'")
 
-# COMMAND ----------
+    def generate_tag_names(self):
+        self.generate_lowest_level_names()
+        self.generate_parent_level_names()
+        return self.data
 
-def return_top_wiki_match(thisSemanticMatchDF, thisLexicalMatchDF):
-    combined_all = pd.merge(thisSemanticMatchDF,thisLexicalMatchDF)
-    #scoring is totally arbitrary
-    combined_all["score"] = (0.1*combined_all["setMatch"]+ 0.1*combined_all["sortMatch"])*(combined_all["semantic_dist"]*100)
-    return combined_all['word', 'score'].sort_values(by = "score", ascending=False)[0]
+    def generate_lowest_level_names(self):
+        data = self.data.copy()
+        cluster_column_name = f'topic_level_{self.num_levels}_cluster_id'
+        cluster_titles = data.groupby([cluster_column_name])['title'].apply(lambda x: '. '.join(x)).reset_index()
+        cluster_titles['seed_words'] = generate_seed_words_from_tfidf(cluster_titles['title'])
+        cluster_titles[f'topic_level_{self.num_levels}'] = cluster_titles['seed_words'].apply(
+            lambda x: self._generate_candidate_list(x)
+        )
+        data = pd.merge(data, cluster_titles[[cluster_column_name, f'topic_level_{self.num_levels}']], 
+                       on=cluster_column_name, how='left')
+        self.data = data
+        return self.data
 
-def embedding_similarity(messages_):
-  message_embeddings_ = embed(messages_)
-  distance = scipy.spatial.distance.cdist([message_embeddings_[0]],  [message_embeddings_[1]], "cosine")[0]
-  print("Similarity score =  {}".format(1-distance))
+    def generate_parent_level_names(self):
+        data = self.data.copy()
+        for level in np.arange(self.num_levels - 1, 0, -1):
+            cluster_column_name = f'topic_level_{level}_cluster_id'
+            child_column_name = f'topic_level_{level + 1}'
+            
+            # Create one representative document per parent cluster (concatenated child tag names)
+            parent_clusters = data.groupby([cluster_column_name])[child_column_name].apply(
+                lambda x: ' '.join(x.unique())
+            ).reset_index()
+            
+            # Generate seed words for ALL parent clusters at once using TF-IDF comparison
+            all_parent_documents = parent_clusters[child_column_name].tolist()
+            all_seed_words = generate_seed_words_from_tfidf(all_parent_documents, 5)
+            
+            # Assign seed words back to each parent cluster
+            parent_clusters['seed_words'] = all_seed_words
+            parent_clusters[f'topic_level_{level}'] = parent_clusters['seed_words'].apply(
+                lambda x: self._generate_candidate_list(x)
+            )
+            data = pd.merge(data, parent_clusters[[cluster_column_name, f'topic_level_{level}']], 
+                          on=cluster_column_name, how='left')
+        
+        self.data = data
+        return self.data
+
+    def _generate_candidate_list(self, word_list):
+        if not word_list or not self.nlp_model:
+            return []
+        title_list = []
+        for this_word in word_list:
+            try:
+                neighbors = wikipedia.search(this_word, results=1)
+                title_list.extend(neighbors)  # Use extend instead of append
+            except:
+                continue
+
+        # clean titles 
+        title_list = [clean_html(title.lower()) for title in title_list if isinstance(title, str)]
+        # remove "disambiguation" from titles
+        title_list = [title.replace("disambiguation", "").strip() for title in title_list]
+
+        #take the titles and use the spacy model to turn parse them into noun chunks, then de-dupe
+        noun_chunk_list = []
+        for candidate in title_list:
+            try:
+                doc = self.nlp_model(str(candidate))
+                for chunk in doc.noun_chunks:
+                    noun_chunk_list.append(chunk.text)
+            except:
+                continue
+
+        #should we de-dupe more intelligently?
+        # return most frequent 4 words concatenated
+        top_candidates = sorted(noun_chunk_list, key=lambda x: len(x.split()), reverse=True)[:4]
+        #return most frequent 3 words concatenated
+        tag_name = '_'.join(top_candidates)
+        tag_name = self.convert_to_tag_name(tag_name)
+        #the papers also have additional filters
+        # only use candidates that have a wiki page of their own
+        # use RACO similarity as a filtering mechanism this is based on a deprecated wiki API
+        return tag_name
