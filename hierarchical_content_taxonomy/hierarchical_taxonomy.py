@@ -6,12 +6,12 @@ from hierarchical_content_taxonomy.taxonomy_creation.cluster_creation import Clu
 from hierarchical_content_taxonomy.taxonomy_classification.hierarchical_classifier import HierarchicalClassifier
 
 class HierarchicalTaxonomy:
-    def __init__(self, urls: list[str]):
+    def __init__(self, urls: list[str], tag_namer=SimpleTagNamer):
         self.data = None
         self.max_level = None
         self.tag_columns = None
         self.urls = urls
-        self.tag_namer = SimpleTagNamer
+        self.tag_namer = tag_namer
         self.cluster_creator = ClusterCreator
         self.data_puller = WordPressScraper(urls)
 

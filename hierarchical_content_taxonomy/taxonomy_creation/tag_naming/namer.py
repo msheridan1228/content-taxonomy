@@ -25,9 +25,20 @@ class TagNamer:
                 raise ValueError(f"Required column '{column}' is missing from the DataFrame.")
 
     @abstractmethod
-    def generate_tag_names(self):
-        pass
+    def generate_tag_names(self) -> pd.DataFrame:
+        """Generate tag names for all hierarchical levels."""
+        self.generate_lowest_level_names()
+        self.generate_parent_level_names()
+        return self.data
     
+    @abstractmethod
+    def generate_lowest_level_names(self):
+        pass
+
+    @abstractmethod
+    def generate_parent_level_names(self):
+        pass
+
     def manually_rename_cluster(self, level: int, cluster_id: int, new_name: str) -> None:
         column_name = f'topic_level_{level}'
         self.data.loc[self.data[f'topic_level_{level}_cluster_id'] == cluster_id, column_name] = new_name

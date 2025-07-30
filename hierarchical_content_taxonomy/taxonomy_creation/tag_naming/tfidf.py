@@ -26,12 +26,9 @@ class TfidfTagNamer(TagNamer):
         self.insignificant_words = ['know', 'need', 'new', 'com', 'thing', 'best', 'do', 'I', 'is', 'cause', 'effect', 'vs', 'way', 'come', 'report', 'say', 'amp']
         self.insignificant_pos_tags = ['CD', 'DT', 'CC', 'PRP$', 'EX', 'PRP', 'TO', 'WDT', 'WP', 'WP$', 'WRB']
 
-    def generate_tag_names(self):
-        self.generate_lowest_level_names()
-        self.generate_parent_level_names()
-        return self.data
-
     def generate_lowest_level_names(self):
+        super().generate_lowest_level_names()
+
         data = self.data.copy()
         cluster_column_name = f'topic_level_{self.num_levels}_cluster_id'
         
@@ -56,6 +53,8 @@ class TfidfTagNamer(TagNamer):
         return self.data
     
     def generate_parent_level_names(self):
+        super().generate_parent_level_names()
+
         data = self.data.copy()
         for level in np.arange(self.num_levels - 1, 0, -1):
             cluster_column_name = f'topic_level_{level}_cluster_id'
